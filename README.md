@@ -7,7 +7,7 @@
 无需安装依赖，运行：
 
 ```sh
-python3 -m http.server 8765 --directory dist
+python3 -m http.server 8765
 ```
 
 然后在浏览器打开 `http://127.0.0.1:8765/`。
@@ -24,14 +24,14 @@ python3 -m http.server 8765 --directory dist
 
 ## GitHub Pages
 
-本仓库使用 GitHub Actions 发布 `dist/`。在仓库 **Settings → Pages → Build and deployment** 中，将 Source 设为 **GitHub Actions**。推送到 `main` 分支后自动部署。
+本仓库可直接用 GitHub Pages 发布。在仓库 **Settings → Pages → Build and deployment** 中，将 Source 设为 **Deploy from a branch**，选择 `main` 分支与 `/ (root)`。
 
 ## 文件
 
-- `dist/index.html`：页面结构
-- `dist/styles.css`：响应式样式与演出
-- `dist/app.js`：剧情、分支、配乐与纪念卡
-- `dist/assets/`：幻蓝新版插画
+- `index.html`：页面结构
+- `styles.css`：响应式样式与演出
+- `app.js`：剧情、分支、配乐与纪念卡
+- `assets/`：幻蓝新版插画
 - `ASSET_PROMPTS.md`：插画的生成提示词
 
 幻蓝是项目所有者的自有 IP。插画依据所有者提供的参考重新设计，未额外附加开源授权。
