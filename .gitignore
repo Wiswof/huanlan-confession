@@ -4,3 +4,5 @@ outputs/
 .env
 .env.*
 !.env.example
+
+.vercel/

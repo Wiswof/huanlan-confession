@@ -1,0 +1,10 @@
+.git/
+.github/
+.openai/
+.vercel/
+work/
+outputs/
+.env
+.env.*
+README.md
+ASSET_PROMPTS.md
