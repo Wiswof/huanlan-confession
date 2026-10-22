@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {createSimulation,WIDTH,HEIGHT,DURATION}=require('../flight.js');
+const {createSimulation,WIDTH,HEIGHT}=require('../flight.js');
 const step=1/120;
 function seeded(seed){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 
@@ -36,14 +36,29 @@ test('defeating the large enemy ends the flight once and preserves the result',(
  const result=JSON.stringify(s.result),time=s.time;game.step(10,{x:1});assert.equal(JSON.stringify(s.result),result);assert.equal(s.time,time);
 });
 
-test('varied flights always finish with finite positions and bounded object counts',()=>{
+test('varied flights remain bounded and only finish on victory or shield loss',()=>{
  for(let seed=1;seed<=24;seed++){
   const game=createSimulation({random:seeded(seed)}),s=game.state;
-  for(let i=0;i<Math.ceil((DURATION+1)/step)&&!s.done;i++){
+  for(let i=0;i<Math.ceil(90/step)&&!s.done;i++){
    game.step(step,{target:{x:WIDTH/2+Math.sin(i/180+seed)*190,y:450+Math.sin(i/240)*90}});
    assert.ok(Number.isFinite(s.player.x)&&Number.isFinite(s.player.y));assert.ok(s.hp>=0&&s.hp<=3);
    assert.ok(s.effects.length+s.bullets.length+s.shots.length+s.enemies.length<1000);
   }
-  assert.ok(s.done);assert.ok(['clear','return','retreat'].includes(s.result.reason));assert.ok(s.time<=DURATION+step);
+  if(s.done)assert.ok(['clear','retreat'].includes(s.result.reason));
+  else{assert.ok(s.time>=89);assert.ok(s.boss);}
  }
+});
+
+
+test('a surviving boss keeps the flight running past the former time limit until defeated',()=>{
+ const game=createSimulation({random:seeded(17)}),s=game.state;
+ s.invulnerable=999;
+ for(let i=0;i<Math.ceil(30/step);i++)game.step(step,{target:{x:20,y:570}});
+ assert.ok(s.boss);const boss=s.boss;boss.hp=100000;
+ for(let i=0;i<Math.ceil(90/step);i++)game.step(step,{target:{x:20,y:570}});
+ assert.ok(s.time>=119);assert.equal(s.done,false);assert.equal(s.result,null);assert.equal(s.boss,boss);
+ assert.ok(s.effects.length+s.bullets.length+s.shots.length+s.enemies.length<1000);
+ boss.hp=1;s.bullets.push({x:boss.x,y:boss.y,r:4,vx:0,vy:0});game.step(step);
+ assert.equal(s.done,true);assert.equal(s.result.reason,'clear');assert.equal(s.result.bossDefeated,true);
+ const result=s.result;game.step(60);assert.equal(s.result,result);assert.equal(s.boss,null);
 });

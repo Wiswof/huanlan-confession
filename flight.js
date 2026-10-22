@@ -1,7 +1,7 @@
 /* Huanlan's little starflight: a deterministic simulation and a canvas view. */
 (function(root){
 'use strict';
-const WIDTH=480,HEIGHT=600,DURATION=42;
+const WIDTH=480,HEIGHT=600;
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const hit=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r;
 function createSimulation(options={}){
@@ -32,7 +32,6 @@ function createSimulation(options={}){
   for(const drop of s.drops){drop.y+=80*dt;if(hit(s.player,drop)){drop.dead=true;if(drop.kind==='repair')s.hp=Math.min(s.maxHp,s.hp+1);else s.power=8;s.score+=50;effect(drop.x,drop.y,'#afffdf',12);}}
   for(const p of s.effects){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}
   s.bullets=s.bullets.filter(b=>!b.dead&&b.y>-20&&b.x>-20&&b.x<WIDTH+20);s.enemies=s.enemies.filter(e=>!e.dead&&e.y<HEIGHT+50);s.shots=s.shots.filter(b=>!b.dead&&b.y<HEIGHT+20&&b.y>-30&&b.x>-20&&b.x<WIDTH+20);s.drops=s.drops.filter(d=>!d.dead&&d.y<HEIGHT+20);s.effects=s.effects.filter(p=>p.life>0);
-  if(s.time>=DURATION&&!s.done)finish('return');
  }
  return {state:s,step,finish};
 }
@@ -60,7 +59,7 @@ function mount(options){
   if(s.time>=27.5&&s.time<30){ctx.fillStyle='#d8beff';ctx.textAlign='center';ctx.font='13px sans-serif';ctx.fillText('前方信号增强 · 注意躲避',240,215);}
   if(paused){ctx.fillStyle='#07142bc9';ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.textAlign='center';ctx.fillStyle='#dcf5ff';ctx.font='24px sans-serif';ctx.fillText('稍作停留',240,270);ctx.font='13px sans-serif';ctx.fillStyle='#a8c4df';ctx.fillText('点击“继续飞行”再次出发',240,301);}
  }
- function hud(){onHud?.({score:s.score,hp:s.hp,time:Math.max(0,Math.ceil(DURATION-s.time)),boss:!!s.boss,power:s.power>0});}
+ function hud(){onHud?.({score:s.score,hp:s.hp,time:Math.floor(s.time),boss:!!s.boss,power:s.power>0});}
  function tick(now){if(destroyed)return;if(!last)last=now;const elapsed=Math.min((now-last)/1000,.1);last=now;if(!paused&&!s.done){accumulator+=elapsed;while(accumulator>=1/120&&!s.done){const x=Number(keys.has('ArrowRight')||keys.has('d'))-Number(keys.has('ArrowLeft')||keys.has('a')),y=Number(keys.has('ArrowDown')||keys.has('s'))-Number(keys.has('ArrowUp')||keys.has('w'));game.step(1/120,{x,y,target:x||y?null:pointer});accumulator-=1/120;}hudClock+=elapsed;if(hudClock>.08){hud();hudClock=0;}}
   draw();if(s.done&&!reported){reported=true;hud();onFinish(s.result);return;}raf=requestAnimationFrame(tick);
  }
@@ -77,6 +76,6 @@ function mount(options){
  resize();hud();raf=requestAnimationFrame(tick);
  return {pause,togglePause:()=>pause(!paused),destroy(){if(destroyed)return;destroyed=true;cancelAnimationFrame(raf);keys.clear();window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('resize',resize);canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointermove',pointerMove);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('pointercancel',pointerUp);canvas.removeEventListener('pointerleave',leave);}};
 }
-const api={createSimulation,mount,WIDTH,HEIGHT,DURATION};
+const api={createSimulation,mount,WIDTH,HEIGHT};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.HuanlanFlight=api;
 })(typeof window!=='undefined'?window:globalThis);
