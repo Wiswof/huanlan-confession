@@ -95,3 +95,24 @@ test('stacked attack damage applies to small enemies and the boss',()=>{
  bossBullet.x=s.boss.x;bossBullet.y=s.boss.y;bossBullet.vx=0;bossBullet.vy=0;
  const hp=s.boss.hp;game.step(step);assert.equal(s.boss.hp,hp-4);
 });
+
+test('companion looks follow combat progress, never shield damage, and reset on replay',()=>{
+ const game=createSimulation({random:seeded(31)}),s=game.state;
+ s.invulnerable=0;s.shots.push({x:s.player.x,y:s.player.y,r:5,vx:0,vy:0});game.step(step);
+ assert.equal(s.hp,2);assert.equal(s.resonance,0);
+ s.kills=6;game.step(step);assert.equal(s.resonance,1);
+ s.hp=3;game.step(step);assert.equal(s.resonance,1);
+ s.time=29;game.step(step);s.boss.hp=s.boss.maxHp*.4;game.step(step);assert.equal(s.resonance,2);
+ s.boss.hp=s.boss.maxHp;game.step(step);assert.equal(s.resonance,2);
+ s.boss.hp=1;s.bullets.push({x:s.boss.x,y:s.boss.y,r:4,vx:0,vy:0});game.step(step);
+ assert.equal(s.resonance,3);assert.equal(s.result.resonance,3);assert.equal(s.result.reason,'clear');
+ assert.equal(createSimulation().state.resonance,0);
+});
+
+test('an attack pickup or sustained combat unlocks a companion moment without requiring damage',()=>{
+ const game=createSimulation(),s=game.state;
+ s.drops.push({x:s.player.x,y:s.player.y,r:13,kind:'power'});game.step(step);
+ assert.equal(s.resonance,1);assert.equal(s.hp,3);
+ s.kills=18;game.step(step);assert.equal(s.resonance,2);assert.equal(s.hp,3);
+ game.finish('retreat');assert.equal(s.result.resonance,2);
+});
