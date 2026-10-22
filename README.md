@@ -47,5 +47,6 @@ python3 -m http.server 8765
 - `ASSET_PROMPTS.md`：剧情插画的生成提示词
 - `FLIGHT_ART_PROMPTS.md`：战机衣装插画的生成提示词
 - `CAMPAIGN_ART_PROMPTS.md`：新增场景、衣装战损及领口调整的提示词
+- `GARMENT_LAYER_EDIT_PROMPTS.md`：移除深色打底、采用单层不透明短上衣的修订记录
 
 幻蓝是项目所有者的自有 IP。插画依据所有者提供的参考重新设计，未额外附加开源授权。

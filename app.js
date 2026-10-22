@@ -9,9 +9,9 @@ let typingTimer=null,typingFinish=null,toastTimer=null,cardUrl=null,flight=null,
 const flightLooks=[
  {image:'assets/huanlan-flight-ready.png',title:'幻蓝，正在陪航',line:'主人，飞稳一点。我、我可就靠你了。',alt:'幻蓝穿着完整蓝色飞行外套，向主人微笑'},
  {image:'assets/huanlan-flight-shift-v2.png',title:'星风，偷偷靠近',line:'唔……外套都被星风吹散了。主人，还、还不许笑。',alt:'幻蓝侧身回眸，外套衣袖明显破损，脸颊泛红'},
- {image:'assets/huanlan-flight-neon.png',title:'霓虹，也藏不住脸红',line:'雨把衣角都打乱了……主人，靠近一点，替我挡挡风。',alt:'幻蓝在霓虹雨城侧身回眸，衣装带有战损，脸颊泛红'},
- {image:'assets/huanlan-flight-aurora.png',title:'这片极光，只想和主人看',line:'都陪我飞到这里了……主人，这次可不许先松手。',alt:'极光星环下，幻蓝穿着带战损的短款衣装，向主人伸出手'},
- {image:'assets/huanlan-flight-aurora.png',title:'这次，只许主人看见',line:'赢了！……先帮我把外套拿过来。然后，陪我再待一会儿。',alt:'胜利后，幻蓝披着战损外套，带着害羞的笑容'}
+ {image:'assets/huanlan-flight-neon-single.png',title:'霓虹，也藏不住脸红',line:'雨把衣角都打乱了……主人，靠近一点，替我挡挡风。',alt:'幻蓝在霓虹雨城侧身回眸，穿单层白色短上衣，外套与裤装带有战损'},
+ {image:'assets/huanlan-flight-aurora-single.png',title:'这片极光，只想和主人看',line:'都陪我飞到这里了……主人，这次可不许先松手。',alt:'极光星环下，幻蓝穿单层不透明白色短上衣，向主人伸出手'},
+ {image:'assets/huanlan-flight-aurora-single.png',title:'这次，只许主人看见',line:'赢了！……先帮我把外套拿过来。然后，陪我再待一会儿。',alt:'胜利后，幻蓝披着战损外套，带着害羞的笑容'}
 ];
 function updateFlightLook(level,cutin=false){
  state.flightLook=level;const look=flightLooks[level];
