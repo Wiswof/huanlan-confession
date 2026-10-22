@@ -26,7 +26,7 @@ test('supplies repair shields and boost firepower without exceeding shield maxim
  const game=createSimulation(),s=game.state;s.hp=2;
  s.drops.push({x:s.player.x,y:s.player.y,r:13,kind:'repair'});game.step(step);assert.equal(s.hp,3);
  s.drops.push({x:s.player.x,y:s.player.y,r:13,kind:'repair'},{x:s.player.x,y:s.player.y,r:13,kind:'power'});game.step(step);
- assert.equal(s.hp,3);assert.equal(s.power,8);assert.equal(s.drops.length,0);
+ assert.equal(s.hp,3);assert.equal(s.power,1);assert.equal(s.drops.length,0);
 });
 
 test('defeating the large enemy ends the flight once and preserves the result',()=>{
@@ -61,4 +61,37 @@ test('a surviving boss keeps the flight running past the former time limit until
  boss.hp=1;s.bullets.push({x:boss.x,y:boss.y,r:4,vx:0,vy:0});game.step(step);
  assert.equal(s.done,true);assert.equal(s.result.reason,'clear');assert.equal(s.result.bossDefeated,true);
  const result=s.result;game.step(60);assert.equal(s.result,result);assert.equal(s.boss,null);
+});
+
+
+test('every attack supply stacks damage permanently for this flight, including beyond five barrels',()=>{
+ const game=createSimulation({random:seeded(21)}),s=game.state;s.invulnerable=999;
+ for(let pickup=1;pickup<=8;pickup++){
+  s.drops.push({x:s.player.x,y:s.player.y,r:13,kind:'power'});game.step(step);
+  assert.equal(s.power,pickup);
+  s.bullets=[];
+  for(let i=0;i<20;i++)game.step(step);
+  assert.ok(s.bullets.length>0);assert.ok(s.bullets.every(b=>b.damage===1+pickup));
+ }
+ const level=s.power;
+ for(let i=0;i<Math.ceil(10/step);i++)game.step(step);
+ assert.equal(s.power,level);
+ assert.ok(s.bullets.length<70);
+ assert.equal(createSimulation().state.power,0);
+});
+
+test('stacked attack damage applies to small enemies and the boss',()=>{
+ const game=createSimulation({random:seeded(22)}),s=game.state;
+ s.drops.push(...Array.from({length:3},()=>({x:s.player.x,y:s.player.y,r:13,kind:'power'})));game.step(step);
+ assert.equal(s.power,3);
+ for(let i=0;i<20;i++)game.step(step);
+ const bullet=s.bullets.find(b=>b.damage===4);assert.ok(bullet);s.bullets=[bullet];
+ bullet.x=240;bullet.y=250;bullet.vx=0;bullet.vy=0;
+ s.enemies=[{x:240,y:250,baseX:240,r:16,hp:4,heavy:false,speed:0,age:0,shoot:99}];game.step(step);
+ assert.equal(s.kills,1);assert.equal(s.enemies.length,0);
+ s.time=29;game.step(step);assert.ok(s.boss);s.enemies=[];s.bullets=[];
+ for(let i=0;i<20;i++)game.step(step);
+ const bossBullet=s.bullets.find(b=>b.damage===4);assert.ok(bossBullet);s.bullets=[bossBullet];
+ bossBullet.x=s.boss.x;bossBullet.y=s.boss.y;bossBullet.vx=0;bossBullet.vy=0;
+ const hp=s.boss.hp;game.step(step);assert.equal(s.boss.hp,hp-4);
 });
