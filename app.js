@@ -3,29 +3,34 @@
 const $=id=>document.getElementById(id);
 const panel=$('panel'),art=$('sceneArt');
 const MASTER='主人';
-const state={phase:'welcome',name:MASTER,scene:0,heart:12,answers:[],bond:{safe:0,spark:0,brave:0},history:[],seen:new Set(),finalAnswer:'',flightResult:null,flightBest:0,flightRewarded:false,flightBonus:0,flightLook:0,flightReturn:{phase:'welcome',scene:0}};
+const state={phase:'welcome',name:MASTER,scene:0,heart:12,answers:[],bond:{safe:0,spark:0,brave:0},history:[],seen:new Set(),finalAnswer:'',flightResult:null,flightBest:0,flightRewarded:false,flightBonus:0,flightLook:0,flightScene:0,flightIntermission:false,flightReturn:{phase:'welcome',scene:0}};
 const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-let typingTimer=null,typingFinish=null,toastTimer=null,cardUrl=null,flight=null;
+let typingTimer=null,typingFinish=null,toastTimer=null,cardUrl=null,flight=null,flightArtLoaded=false;
 const flightLooks=[
  {image:'assets/huanlan-flight-ready.png',title:'幻蓝，正在陪航',line:'主人，飞稳一点。我、我可就靠你了。',alt:'幻蓝穿着完整蓝色飞行外套，向主人微笑'},
  {image:'assets/huanlan-flight-shift-v2.png',title:'星风，偷偷靠近',line:'唔……外套都被星风吹散了。主人，还、还不许笑。',alt:'幻蓝侧身回眸，外套衣袖明显破损，脸颊泛红'},
- {image:'assets/huanlan-flight-afterglow-v2.png',title:'心跳，好像藏不住了',line:'别一直盯着我呀……等赢了，再让主人慢慢看。',alt:'幻蓝向主人递出破损外套，无袖上衣下摆呈撕裂状，胸前衣料完整遮挡，神情娇羞'},
- {image:'assets/huanlan-flight-afterglow-v2.png',title:'这次，只许主人看见',line:'赢了！……先帮我把外套拿过来。然后，陪我再待一会儿。',alt:'胜利后，幻蓝披着战损外套，带着害羞的笑容'}
+ {image:'assets/huanlan-flight-neon.png',title:'霓虹，也藏不住脸红',line:'雨把衣角都打乱了……主人，靠近一点，替我挡挡风。',alt:'幻蓝在霓虹雨城侧身回眸，衣装带有战损，脸颊泛红'},
+ {image:'assets/huanlan-flight-aurora.png',title:'这片极光，只想和主人看',line:'都陪我飞到这里了……主人，这次可不许先松手。',alt:'极光星环下，幻蓝穿着带战损的短款衣装，向主人伸出手'},
+ {image:'assets/huanlan-flight-aurora.png',title:'这次，只许主人看见',line:'赢了！……先帮我把外套拿过来。然后，陪我再待一会儿。',alt:'胜利后，幻蓝披着战损外套，带着害羞的笑容'}
 ];
 function updateFlightLook(level,cutin=false){
  state.flightLook=level;const look=flightLooks[level];
  art.style.setProperty('--flight-art',`url("${look.image}")`);art.setAttribute('aria-label',look.alt);
  $('flightCompanion').innerHTML=`<img class="flight-companion-image" src="${look.image}" alt="${look.alt}"><div><p class="eyebrow">HUANLAN / 私人陪航</p><strong>${look.title}</strong><p class="companion-line">“${look.line}”</p><button class="text-action" id="peekCompanion">看她一眼 ↗</button></div>`;
- if(cutin&&level<3){record('幻蓝',look.line);showFlightCue();audio.chime();}
+ if(cutin&&level===1){record('幻蓝',look.line);showFlightCue();audio.chime();}
 }
-function showFlightCue(){
+function showFlightCue(options={}){
  if(document.querySelector('dialog[open]'))return;
  const look=flightLooks[state.flightLook];flight?.pause(true);
- $('flightCueTitle').textContent=look.title;$('flightCueImage').src=look.image;$('flightCueImage').alt=look.alt;$('flightCueLine').textContent=`“${look.line}”`;
- $('continueFlight').innerHTML=state.phase==='flight'?'继续护航 <span>↗</span>':'回到频道 <span>↗</span>';
+ $('flightCueTitle').textContent=options.title||look.title;$('flightCueImage').src=look.image;$('flightCueImage').alt=look.alt;$('flightCueLine').textContent=`“${look.line}”`;
+ $('flightCueNote').textContent=options.note||'幻蓝拉住了主人的衣角，时间也停了一小会儿。';
+ $('continueFlight').innerHTML=options.nextScene?`前往${options.nextScene} <span>↗</span>`:state.phase==='flight'?'继续护航 <span>↗</span>':'回到频道 <span>↗</span>';
  $('flightCueDialog').showModal();
 }
-function closeFlightCue(){ $('flightCueDialog').close();if(state.phase==='flight')flight?.pause(false); }
+function closeFlightCue(){
+ $('flightCueDialog').close();
+ if(state.phase==='flight'){if(state.flightIntermission){state.flightIntermission=false;flight?.continueStage();}else flight?.pause(false);}
+}
 const scenes=[
  {title:'下播后的秘密',number:'01',caption:'直播间安静了。她的麦克风却还亮着。',narration:'23:17 · 直播已经结束。所有窗口逐渐熄灭，只有一个蓝色的私人频道悄悄亮起。',line:n=>`${n}，你还没走呀。\n刚刚说“晚安”的时候，我其实还舍不得关掉麦克风。\n\n今晚……能再借我一点点时间吗？`,choices:[
   {text:'当然，今晚的时间留给你。',bond:'safe',delta:25,label:'安心 +1',reply:'她把准备关掉的麦克风拉了回来，嘴角藏不住地翘起。',line:n=>`那我就不装作“只是刚好没睡”了。\n${n}，我是真的想和你多待一会儿。`},
@@ -64,7 +69,7 @@ function focusControl(){requestAnimationFrame(()=>{const el=panel.querySelector(
 function updateChrome(){
  const playing=state.phase==='flight',flying=['flightIntro','flight','flightResult'].includes(state.phase);
  document.querySelector('.app').classList.toggle('flight-mode',playing);document.querySelector('.app').classList.toggle('flight-channel',flying);
- art.classList.toggle('flight-art',flying);$('flightCompanion').classList.toggle('hidden',!flying);
+ document.querySelector('.app').dataset.flightScene=window.HuanlanFlight?.STAGES?.[state.flightScene]?.id||'harbor';art.classList.toggle('flight-art',flying);$('flightCompanion').classList.toggle('hidden',!flying);
  $('flightButton').disabled=flying;
  $('chapters').textContent=playing?'星海护航 · 幻蓝与你同队':'幻蓝的私人频道';
  $('channelStatus').textContent=playing?'FLIGHT LINK · 连接稳定':state.phase==='ending'?'已送达 · 星光仍然亮着':'OFF AIR · 只对主人可见';
@@ -74,11 +79,32 @@ function updateChrome(){
  if(flying)updateFlightLook(state.flightLook);
  $('artCaption').textContent=flying?'主人，幻蓝会守在你的侧翼。':state.phase==='scene'||state.phase==='reaction'?scenes[state.scene].caption:ending?'有些话，想亲口告诉主人。':'把最后一束星光，留给还没离开的主人。';
 }
-function beginFlight(destination){state.flightLook=0;state.flightReturn=destination||{phase:state.phase,scene:state.scene};state.phase='flightIntro';render();}
+function beginFlight(destination){if(!flightArtLoaded){flightArtLoaded=true;for(const look of flightLooks){const image=new Image();image.src=look.image;}}state.flightLook=0;state.flightScene=0;state.flightIntermission=false;state.flightReturn=destination||{phase:state.phase,scene:state.scene};state.phase='flightIntro';render();}
 function leaveFlight(){const destination=state.flightReturn;state.phase=destination.phase;state.scene=destination.scene;render();}
 function mountFlight(){
+ let equipmentKey='';
  try{
-  flight=window.HuanlanFlight.mount({canvas:$('flightCanvas'),onHud(h){$('flightScore').textContent=String(h.score).padStart(5,'0');$('flightLife').textContent='♥'.repeat(h.hp)+'♡'.repeat(3-h.hp);$('flightLife').setAttribute('aria-label',`护盾 ${h.hp} / 3`);$('flightTime').textContent=h.time+'s';if(h.resonance!==state.flightLook)updateFlightLook(h.resonance,true);$('flightPower').textContent=`火力 Lv.${h.power+1} · 单发伤害 ${h.damage}`;$('flightRadio').textContent=h.boss?'前方有大型敌机，幻蓝替主人盯着弹幕。':h.power?`火力已经升到 Lv.${h.power+1}，主人尽管向前。`:'主人，幻蓝一直在这里。';},onPause(paused){$('pauseFlight').textContent=paused?'继续飞行':'暂停';$('pauseFlight').setAttribute('aria-pressed',String(paused));},onFinish(result){state.flightResult=result;state.flightLook=result.resonance;state.flightBest=Math.max(state.flightBest,result.score);state.flightBonus=0;if(!state.flightRewarded){state.flightBonus=Math.min(6,Math.floor(result.score/400)+(result.reason==='retreat'?0:2));state.heart=Math.min(100,state.heart+state.flightBonus);state.flightRewarded=true;}state.phase='flightResult';record('幻蓝',result.reason==='retreat'?'主人，先回我这里歇一会儿。下次还一起飞。':'主人，欢迎返航。刚刚和主人并肩的时候，我好开心。');render();audio.chime();}});
+  flight=window.HuanlanFlight.mount({canvas:$('flightCanvas'),
+   onHud(h){
+    $('flightScore').textContent=String(h.score).padStart(5,'0');$('flightLife').textContent='♥'.repeat(h.hp)+'♡'.repeat(h.maxHp-h.hp);$('flightLife').setAttribute('aria-label',`护盾 ${h.hp} / ${h.maxHp}`);$('flightTime').textContent=h.time+'s';
+    state.flightScene=h.stageIndex;document.querySelector('.app').dataset.flightScene=h.scene.id;$('flightRoute').textContent='STARFLIGHT / '+h.scene.name;
+    if(h.resonance!==state.flightLook)updateFlightLook(h.resonance,!h.transition);
+    $('flightPower').textContent=`火力 Lv.${h.power+1} · 单发伤害 ${h.damage}`;
+    const key=[h.laser,h.missile,h.wingman,h.barrier,h.magnet].join('/');
+    if(key!==equipmentKey){equipmentKey=key;const equipment=[['激光',h.laser,'laser'],['导弹',h.missile,'missile'],['僚机',h.wingman,'wingman'],['光盾',h.barrier,'shield'],['磁吸',h.magnet,'magnet']].filter(item=>item[1]>0);$('flightWeapons').innerHTML=equipment.length?equipment.map(([label,level,kind])=>`<span class="weapon-chip ${kind}">${label} ${kind==='shield'?'×':'Lv.'}${level}</span>`).join(''):'<span class="weapon-tip">拾取补给，叠加火力</span>';}
+    $('flightRadio').textContent=h.notice|| (h.boss?'主人，注意预警线，幻蓝替你盯着侧翼。':h.power?`主人，${h.scene.name}的风景，想和你一起看。`:'主人，幻蓝一直在这里。');
+   },
+   onPause(paused){$('pauseFlight').textContent=paused?'继续飞行':'暂停';$('pauseFlight').setAttribute('aria-pressed',String(paused));},
+   onStageClear(info){
+    state.flightIntermission=true;state.flightScene=info.nextStage;document.querySelector('.app').dataset.flightScene=info.scene.id;updateFlightLook(info.resonance);
+    record('幻蓝',flightLooks[info.resonance].line);showFlightCue({title:info.scene.name+' · 新航线已开启',nextScene:info.scene.name,note:'武器已保留 · 护盾已修复 · 火力与光盾补给已送达'});audio.chime();
+   },
+   onFinish(result){
+    state.flightResult=result;state.flightIntermission=false;state.flightScene=result.stageIndex;state.flightLook=result.resonance;state.flightBest=Math.max(state.flightBest,result.score);state.flightBonus=0;
+    if(!state.flightRewarded){state.flightBonus=Math.min(6,Math.floor(result.score/600)+(result.reason==='retreat'?0:2));state.heart=Math.min(100,state.heart+state.flightBonus);state.flightRewarded=true;}
+    state.phase='flightResult';record('幻蓝',result.reason==='retreat'?'主人，先回我这里歇一会儿。下次还一起飞。':'主人，欢迎返航。刚刚和主人并肩的时候，我好开心。');render();audio.chime();
+   }
+  });
   $('flightCanvas').focus({preventScroll:true});
  }catch(error){panel.innerHTML='<p class="eyebrow">FLIGHT LINK</p><h2 class="ending-title">这次先歇一会儿</h2><p class="lead">飞行画面暂时没能连接。主人，我们先继续聊天吧。</p><button class="primary" data-action="leaveFlight">回到幻蓝身边 <span>→</span></button>';}
 }
@@ -93,12 +119,12 @@ function render(){
   const answer=state.answers[state.scene];line=answer.line(state.name);record('幻蓝',line,`reaction-${state.scene}`);
   panel.innerHTML=`<div class="scene-heading"><p class="eyebrow">${scene.title}</p><span class="scene-number">PRIVATE CHANNEL</span></div>${meter()}<p class="chosen-text">${esc(answer.text)}</p>${speaker()}<div class="dialogue" id="dialogue" aria-live="off"></div><div id="afterDialogue" class="hidden"><div class="reaction-box" role="status"><div class="reaction-tag">♥ 心动 +${answer.delta} · ${answer.label}</div><p>${answer.reply}</p></div><button class="primary" data-action="next">继续听她说 <span>→</span></button></div>`;
  }else if(state.phase==='flightIntro'){
-  panel.innerHTML=`<p class="eyebrow">STARFLIGHT / 星海护航</p><div class="flight-emblem" aria-hidden="true">✧<span>✈</span>✧</div><h1 class="ending-title">主人，<br><em>陪我飞一会儿？</em></h1><p class="lead">“今晚换上了只给主人看的飞行外套。<br>主人来掌舵……可要好好保护我哦。”</p><div class="flight-guide"><span><b>01</b> 战机会自动开火</span><span><b>02</b> 方向键 / WASD / 鼠标移动</span><span><b>03</b> 手机按住画面拖动，避开粉色弹幕</span></div><button class="primary" data-action="launchFlight">一起出发 <span>↗</span></button><button class="text-action flight-skip" data-action="leaveFlight">先陪幻蓝聊聊天</button>`;
+  panel.innerHTML=`<p class="eyebrow">STARFLIGHT / 星海护航</p><div class="flight-emblem" aria-hidden="true">✧<span>✈</span>✧</div><h1 class="ending-title">主人，<br><em>陪我飞一会儿？</em></h1><p class="lead">“今晚换上了只给主人看的飞行外套。<br>主人来掌舵……可要好好保护我哦。”</p><div class="flight-guide"><span><b>01</b> 战机会自动开火</span><span><b>02</b> 方向键 / WASD / 鼠标移动</span><span><b>03</b> 手机拖动移动，避开弹幕与激光预警线</span><span><b>✦</b> 导弹、激光等补给自动生效，可持续叠加</span></div><button class="primary" data-action="launchFlight">一起出发 <span>↗</span></button><button class="text-action flight-skip" data-action="leaveFlight">先陪幻蓝聊聊天</button>`;
  }else if(state.phase==='flight'){
-  panel.innerHTML=`<div class="scene-heading"><p class="eyebrow">STARFLIGHT / 星海护航</p><button class="text-action" data-action="leaveFlight">返回频道 ↗</button></div><div class="flight-hud"><div><span>星航得分</span><strong id="flightScore">00000</strong></div><div><span>护盾</span><strong id="flightLife" class="flight-life" aria-label="护盾 3 / 3">♥♥♥</strong></div><div><span>飞行时间</span><strong id="flightTime">0s</strong></div></div><div class="flight-stage"><canvas id="flightCanvas" tabindex="0" role="application" aria-label="星海护航战机游戏。自动开火，用方向键或WASD移动；鼠标移动或手机拖动操纵战机。空格或Escape暂停。避开敌机与粉色弹幕。"></canvas></div><div class="flight-controls"><span><span id="flightPower">火力 Lv.1 · 单发伤害 1</span><br>自动开火 · 拖动 / 方向键移动</span><button class="secondary" data-action="pauseFlight" id="pauseFlight" aria-pressed="false">暂停</button></div><p class="flight-radio" id="flightRadio" role="status">主人，幻蓝一直在这里。</p>`;
+  panel.innerHTML=`<div class="scene-heading"><p class="eyebrow" id="flightRoute">STARFLIGHT / 星港近海</p><button class="text-action" data-action="leaveFlight">返回频道 ↗</button></div><div class="flight-hud"><div><span>星航得分</span><strong id="flightScore">00000</strong></div><div><span>护盾</span><strong id="flightLife" class="flight-life" aria-label="护盾 3 / 3">♥♥♥</strong></div><div><span>飞行时间</span><strong id="flightTime">0s</strong></div></div><div class="flight-weapons" id="flightWeapons" aria-label="当前装备"><span class="weapon-tip">拾取补给，叠加火力</span></div><div class="flight-stage"><canvas id="flightCanvas" tabindex="0" role="application" aria-label="星海护航战机游戏。自动开火，用方向键或WASD移动；鼠标移动或手机拖动操纵战机。空格或Escape暂停。避开敌机与粉色弹幕。"></canvas></div><div class="flight-controls"><span><span id="flightPower">火力 Lv.1 · 单发伤害 1</span><br>自动开火 · 拖动 / 方向键移动</span><button class="secondary" data-action="pauseFlight" id="pauseFlight" aria-pressed="false">暂停</button></div><p class="flight-radio" id="flightRadio" role="status">主人，幻蓝一直在这里。</p>`;
  }else if(state.phase==='flightResult'){
   const result=state.flightResult,cleared=result.reason==='clear';
-  panel.innerHTML=`<p class="eyebrow">STARFLIGHT / 航行记录</p><div class="flight-result-icon" aria-hidden="true">${cleared?'✦':'☾'}</div><h1 class="ending-title">${cleared?'漂亮的配合，':'先回来歇一会儿，'}<br><em>主人。</em></h1><p class="lead">${cleared?'“赢了！……先帮我把外套拿过来。<br>然后，陪我再待一会儿。”':'“护盾消耗完也没关系。<br>主人平安回来，我就很开心啦。”'}</p><div class="flight-result-stats"><div><strong>${result.score}</strong><span>星航得分</span></div><div><strong>${result.kills}</strong><span>击落敌机</span></div><div><strong>${state.flightBest}</strong><span>本次最高</span></div></div>${state.flightBonus?`<p class="flight-bonus">♡ 默契信号 +${state.flightBonus}</p>`:''}<button class="primary" data-action="leaveFlight">回到幻蓝身边 <span>→</span></button><button class="secondary flight-retry" data-action="launchFlight">↺ 再飞一局</button>`;
+  panel.innerHTML=`<p class="eyebrow">STARFLIGHT / 航行记录</p><div class="flight-result-icon" aria-hidden="true">${cleared?'✦':'☾'}</div><h1 class="ending-title">${cleared?'漂亮的配合，':'先回来歇一会儿，'}<br><em>主人。</em></h1><p class="lead">${cleared?'“赢了！……先帮我把外套拿过来。<br>然后，陪我再待一会儿。”':'“护盾消耗完也没关系。<br>主人平安回来，我就很开心啦。”'}</p><div class="flight-result-stats"><div><strong>${result.score}</strong><span>星航得分</span></div><div><strong>${result.kills}</strong><span>击落敌机 · 首领 ${result.bossesDefeated}</span></div><div><strong>${state.flightBest}</strong><span>本次最高</span></div></div>${state.flightBonus?`<p class="flight-bonus">♡ 默契信号 +${state.flightBonus}</p>`:''}<button class="primary" data-action="leaveFlight">回到幻蓝身边 <span>→</span></button><button class="secondary flight-retry" data-action="launchFlight">↺ 再飞一局</button>`;
  }else if(state.phase==='envelope'){
   record('幻蓝',`${state.name}，这封信的收件人，从一开始就只有你。`,'envelope');
   panel.innerHTML=`<p class="eyebrow">ONE LETTER. ONE RECIPIENT.</p><h1 class="ending-title">这封信，<br><em>终于可以交给你了。</em></h1><p class="lead">“本来想写得更漂亮一点。<br>后来发现，最想说的话其实很简单。”</p><button class="envelope" data-action="open" aria-label="打开幻蓝写给你的信"><span aria-hidden="true">✦</span></button><p class="envelope-label">收件人：${n}<br><span class="muted">寄件人：终于鼓起勇气的幻蓝</span></p><button class="primary" data-action="open">打开这封只属于我的信 <span>↗</span></button><p class="smallprint">封口的星星，还留着她掌心的温度。</p>`;
@@ -116,7 +142,7 @@ panel.addEventListener('click',async e=>{
  if(action==='skip'){typingFinish?.();return;}
  if(action==='start'){state.phase='scene';render();}
  else if(action==='next'){if(state.scene===0){beginFlight({phase:'scene',scene:1});}else{if(state.scene<2){state.scene++;state.phase='scene';}else state.phase='envelope';render();}}
- else if(action==='launchFlight'){state.flightLook=0;state.phase='flight';render();}
+ else if(action==='launchFlight'){state.flightLook=0;state.flightScene=0;state.flightIntermission=false;state.phase='flight';render();}
  else if(action==='pauseFlight'){flight?.togglePause();}
  else if(action==='leaveFlight'){leaveFlight();}
  else if(action==='open'){state.phase='confession';render();audio.chime();}
@@ -129,7 +155,7 @@ panel.addEventListener('click',async e=>{
   state.finalAnswer=button.dataset.answer;record('你',state.finalAnswer==='love'?'我也喜欢你，幻蓝。':'把手给我，未来慢慢写。');state.phase='ending';audio.chime();render();
  }
 });
-function reset(){stopTyping();clearTimeout(toastTimer);$('toast').classList.remove('show');Object.assign(state,{phase:'welcome',name:MASTER,scene:0,heart:12,answers:[],bond:{safe:0,spark:0,brave:0},history:[],seen:new Set(),finalAnswer:'',flightResult:null,flightBest:0,flightRewarded:false,flightBonus:0,flightLook:0,flightReturn:{phase:'welcome',scene:0}});render();window.scrollTo({top:0,behavior:'instant'});}
+function reset(){stopTyping();clearTimeout(toastTimer);$('toast').classList.remove('show');Object.assign(state,{phase:'welcome',name:MASTER,scene:0,heart:12,answers:[],bond:{safe:0,spark:0,brave:0},history:[],seen:new Set(),finalAnswer:'',flightResult:null,flightBest:0,flightRewarded:false,flightBonus:0,flightLook:0,flightScene:0,flightIntermission:false,flightReturn:{phase:'welcome',scene:0}});render();window.scrollTo({top:0,behavior:'instant'});}
 $('brand').addEventListener('click',e=>{e.preventDefault();if(state.phase==='welcome')return;flight?.pause(true);$('restartDialog').showModal();});
 $('cancelRestart').addEventListener('click',()=>$('restartDialog').close());$('confirmRestart').addEventListener('click',()=>{$('restartDialog').close();reset();});
 $('flightButton').addEventListener('click',()=>beginFlight());
@@ -164,7 +190,6 @@ async function saveCard(button){
  }catch{toast('保存暂未成功。请在在线试玩页中重试。');}finally{if(button.isConnected){button.disabled=false;button.innerHTML=original;}}
 }
 // Preload the ending without delaying the opening scene.
-for(const look of flightLooks){const image=new Image();image.src=look.image;}
 const endingPreload=new Image();endingPreload.src='assets/huanlan-ending.png';
 render();
 })();
